@@ -5,21 +5,23 @@
   --terracotta: #a93400;
   --cream: #ebd999;
   --primary: #505423;
-  --blue: #003e83;
+  --primary-dark: #3a3d19;
+  --primary-deeper: #2c2f18;
+  --primary-light: #6d7342;
 
   /* alias semánticos */
-  --ink-navy: var(--blue);
-  --ink-navy-deep: #002a5c;
-  --blue-line: #4a7ab5;
+  --ink-navy: var(--primary-dark);
+  --ink-navy-deep: var(--primary-deeper);
+  --blue-line: var(--primary-light);
   --paper: var(--cream);
   --paper-dim: #e0cc8a;
-  --graphite: #2c2f18;
+  --graphite: var(--primary-deeper);
   --clay: var(--terracotta);
   --growth: var(--primary);
-  --growth-deep: #3d4019;
+  --growth-deep: var(--primary-dark);
   --gold-stamp: var(--cream);
 
-  --stage-riego: var(--blue);
+  --stage-riego: var(--primary-light);
   --stage-suministro: var(--terracotta);
   --stage-plantacion: var(--primary);
 
@@ -39,11 +41,7 @@ body {
 }
 
 body {
-  background-color: var(--blue);
-  background-image:
-    linear-gradient(rgba(235, 217, 153, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(235, 217, 153, 0.07) 1px, transparent 1px);
-  background-size: 28px 28px;
+  background-color: var(--primary-dark);
   color: var(--cream);
   font-family: var(--font-body);
   min-height: 100vh;
@@ -51,7 +49,7 @@ body {
 
 ::selection {
   background: var(--cream);
-  color: var(--blue);
+  color: var(--primary-deeper);
 }
 
 @keyframes stamp-in {

@@ -21,10 +21,10 @@ const COLOR_MAP: Record<
     inactiveBg: "rgba(80, 84, 35, 0.1)",
   },
   gold: {
-    border: "var(--blue)",
-    text: "var(--blue)",
-    bg: "rgba(0, 62, 131, 0.18)",
-    inactiveBg: "rgba(0, 62, 131, 0.08)",
+    border: "var(--primary-deeper)",
+    text: "var(--primary-deeper)",
+    bg: "rgba(44, 47, 24, 0.18)",
+    inactiveBg: "rgba(44, 47, 24, 0.08)",
   },
   clay: {
     border: "var(--terracotta)",

@@ -37,7 +37,7 @@ export default function Gantt({ state }: { state: FullState }) {
   return (
     <div
       className="rounded-sm border-2 p-5"
-      style={{ borderColor: "var(--blue-line)", backgroundColor: "rgba(0, 42, 92, 0.55)" }}
+      style={{ borderColor: "var(--primary-light)", backgroundColor: "rgba(44, 47, 24, 0.45)" }}
     >
       <div className="mb-4 flex items-baseline justify-between">
         <h2

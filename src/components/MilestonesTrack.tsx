@@ -17,7 +17,7 @@ export default function MilestonesTrack({
   return (
     <div
       className="rounded-sm border-2 p-5"
-      style={{ borderColor: "var(--cream)", backgroundColor: "rgba(0, 42, 92, 0.55)" }}
+      style={{ borderColor: "var(--cream)", backgroundColor: "rgba(44, 47, 24, 0.45)" }}
     >
       <div className="mb-1 flex items-baseline justify-between">
         <h2
