@@ -9,9 +9,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
-const MIN_SCALE = 0.4;
-const MAX_SCALE = 5;
+const MIN_ZOOM = 0.4;
+const MAX_ZOOM = 5;
 const ZOOM_STEP = 1.25;
+const MAX_CANVAS_PIXELS = 14_000_000;
 
 type ViewerMode = "navigate" | "comment";
 
@@ -30,6 +31,11 @@ type PlanViewerProps = {
 const btnBase =
   "focus-ring flex h-11 w-11 items-center justify-center rounded-sm border-2 text-lg font-bold leading-none active:scale-95 sm:h-10 sm:w-10";
 
+function getDpr(): number {
+  if (typeof window === "undefined") return 1;
+  return Math.min(window.devicePixelRatio || 1, 2.5);
+}
+
 export default function PlanViewer({
   pdfUrl,
   page,
@@ -45,63 +51,86 @@ export default function PlanViewer({
   const layerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pdfRef = useRef<pdfjs.PDFDocumentProxy | null>(null);
+  const fitScaleRef = useRef(1);
+  const renderGenRef = useRef(0);
+  const lastRenderedPageRef = useRef(page);
 
-  const [scale, setScale] = useState(1);
+  const [zoom, setZoom] = useState(1);
+  const [gestureMul, setGestureMul] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [pageSize, setPageSize] = useState({ w: 0, h: 0 });
   const [loading, setLoading] = useState(true);
+  const [rendering, setRendering] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
-  const [animateTransform, setAnimateTransform] = useState(false);
+  const [animatePan, setAnimatePan] = useState(false);
 
-  const scaleRef = useRef(1);
+  const zoomRef = useRef(1);
+  const gestureMulRef = useRef(1);
   const panRef = useRef({ x: 0, y: 0 });
   const rafRef = useRef<number | null>(null);
 
   const dragRef = useRef({
     active: false,
     moved: false,
+    pinching: false,
     startX: 0,
     startY: 0,
     panX: 0,
     panY: 0,
     pointers: new Map<number, { x: number; y: number }>(),
     pinchDist: 0,
-    pinchScale: 1,
+    pinchStartZoom: 1,
   });
 
-  const clampScale = useCallback(
-    (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s)),
+  const clampZoom = useCallback(
+    (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z)),
     []
   );
 
-  const flushTransform = useCallback(() => {
+  const displayZoom = zoom * gestureMul;
+
+  const flushPan = useCallback(() => {
     if (rafRef.current != null) return;
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null;
-      setScale(scaleRef.current);
       setPan({ ...panRef.current });
     });
   }, []);
 
-  const resetView = useCallback(() => {
-    setAnimateTransform(true);
-    scaleRef.current = 1;
-    panRef.current = { x: 0, y: 0 };
-    setScale(1);
-    setPan({ x: 0, y: 0 });
+  const flushGesture = useCallback(() => {
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      setGestureMul(gestureMulRef.current);
+    });
   }, []);
+
+  const commitZoom = useCallback(
+    (next: number) => {
+      const clamped = clampZoom(next);
+      zoomRef.current = clamped;
+      gestureMulRef.current = 1;
+      setGestureMul(1);
+      setZoom(clamped);
+    },
+    [clampZoom]
+  );
+
+  const resetView = useCallback(() => {
+    setAnimatePan(true);
+    commitZoom(1);
+    panRef.current = { x: 0, y: 0 };
+    setPan({ x: 0, y: 0 });
+  }, [commitZoom]);
 
   const zoomBy = useCallback(
     (factor: number) => {
-      setAnimateTransform(true);
-      const next = clampScale(scaleRef.current * factor);
-      scaleRef.current = next;
-      setScale(next);
+      commitZoom(zoomRef.current * factor);
     },
-    [clampScale]
+    [commitZoom]
   );
 
-  // Cargar PDF una vez por URL
+  // Cargar PDF
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -128,66 +157,99 @@ export default function PlanViewer({
     };
   }, [pdfUrl]);
 
-  // Renderizar página activa
+  // Renderizar PDF a resolución nativa según zoom (no escalar bitmap con CSS)
   useEffect(() => {
     const pdf = pdfRef.current;
     const canvas = canvasRef.current;
     const container = viewportRef.current;
     if (!pdf || !canvas || !container || loading) return;
 
+    let zoomToRender = zoom;
+    if (lastRenderedPageRef.current !== page) {
+      lastRenderedPageRef.current = page;
+      zoomToRender = 1;
+      zoomRef.current = 1;
+      gestureMulRef.current = 1;
+      panRef.current = { x: 0, y: 0 };
+      setZoom(1);
+      setGestureMul(1);
+      setPan({ x: 0, y: 0 });
+    }
+
+    const gen = ++renderGenRef.current;
     let cancelled = false;
+    setRendering(true);
 
     (async () => {
       try {
         const pdfPage = await pdf.getPage(page);
-        if (cancelled) return;
+        if (cancelled || gen !== renderGenRef.current) return;
 
         const baseViewport = pdfPage.getViewport({ scale: 1 });
         const fitScale = (container.clientWidth - 8) / baseViewport.width;
-        const renderScale = Math.min(Math.max(fitScale, 0.5), 2);
-        const viewport = pdfPage.getViewport({ scale: renderScale });
+        fitScaleRef.current = fitScale;
+
+        const pdfScale = fitScale * zoomToRender;
+        const viewport = pdfPage.getViewport({ scale: pdfScale });
+
+        let dpr = getDpr();
+        while (
+          viewport.width * viewport.height * dpr * dpr > MAX_CANVAS_PIXELS &&
+          dpr > 1
+        ) {
+          dpr -= 0.25;
+        }
 
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        setPageSize({ w: viewport.width, h: viewport.height });
+        const pixelW = Math.floor(viewport.width * dpr);
+        const pixelH = Math.floor(viewport.height * dpr);
+
+        canvas.width = pixelW;
+        canvas.height = pixelH;
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
+
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, pixelW, pixelH);
+        ctx.scale(dpr, dpr);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
 
         await pdfPage.render({ canvasContext: ctx, viewport, canvas }).promise;
-        if (cancelled) return;
+        if (cancelled || gen !== renderGenRef.current) return;
 
-        if (onPageRender) {
-          const thumbScale = 0.15;
-          const thumbVp = pdfPage.getViewport({ scale: thumbScale });
+        setPageSize({ w: viewport.width, h: viewport.height });
+
+        if (onPageRender && zoomToRender === 1) {
+          const thumbVp = pdfPage.getViewport({ scale: 0.15 });
           const off = document.createElement("canvas");
           off.width = thumbVp.width;
           off.height = thumbVp.height;
           const offCtx = off.getContext("2d");
           if (offCtx) {
             await pdfPage.render({ canvasContext: offCtx, viewport: thumbVp, canvas: off }).promise;
-            onPageRender(off.toDataURL("image/jpeg", 0.6), page);
+            onPageRender(off.toDataURL("image/jpeg", 0.7), page);
           }
         }
-
-        resetView();
       } catch {
-        if (!cancelled) setRenderError("Error al renderizar la hoja");
+        if (!cancelled && gen === renderGenRef.current) {
+          setRenderError("Error al renderizar la hoja");
+        }
+      } finally {
+        if (gen === renderGenRef.current) setRendering(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [pdfUrl, page, loading, onPageRender, resetView]);
+  }, [pdfUrl, page, loading, zoom, onPageRender]);
 
   useEffect(() => {
-    scaleRef.current = scale;
-  }, [scale]);
-
-  useEffect(() => {
-    panRef.current = pan;
-  }, [pan]);
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   useEffect(() => {
     return () => {
@@ -198,13 +260,10 @@ export default function PlanViewer({
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
       e.preventDefault();
-      setAnimateTransform(false);
       const delta = e.deltaY > 0 ? 0.9 : 1.1;
-      const next = clampScale(scaleRef.current * delta);
-      scaleRef.current = next;
-      setScale(next);
+      commitZoom(zoomRef.current * delta);
     },
-    [clampScale]
+    [commitZoom]
   );
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -213,7 +272,7 @@ export default function PlanViewer({
     const el = viewportRef.current;
     if (!el) return;
 
-    setAnimateTransform(false);
+    setAnimatePan(false);
     el.setPointerCapture(e.pointerId);
     const d = dragRef.current;
     d.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -221,6 +280,7 @@ export default function PlanViewer({
     if (d.pointers.size === 1) {
       d.active = true;
       d.moved = false;
+      d.pinching = false;
       d.startX = e.clientX;
       d.startY = e.clientY;
       d.panX = panRef.current.x;
@@ -228,8 +288,11 @@ export default function PlanViewer({
     } else if (d.pointers.size === 2) {
       const pts = [...d.pointers.values()];
       d.pinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      d.pinchScale = scaleRef.current;
+      d.pinchStartZoom = zoomRef.current;
+      d.pinching = true;
       d.active = false;
+      gestureMulRef.current = 1;
+      setGestureMul(1);
     }
   };
 
@@ -242,10 +305,9 @@ export default function PlanViewer({
       const pts = [...d.pointers.values()];
       const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
       if (d.pinchDist > 0) {
-        const ratio = dist / d.pinchDist;
-        const next = clampScale(d.pinchScale * ratio);
-        scaleRef.current = next;
-        flushTransform();
+        const preview = clampZoom(d.pinchStartZoom * (dist / d.pinchDist));
+        gestureMulRef.current = preview / zoomRef.current;
+        flushGesture();
       }
       return;
     }
@@ -255,14 +317,14 @@ export default function PlanViewer({
     const dy = e.clientY - d.startY;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) d.moved = true;
     panRef.current = { x: d.panX + dx, y: d.panY + dy };
-    flushTransform();
+    flushPan();
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     const d = dragRef.current;
     const layer = layerRef.current;
 
-    if (d.pointers.size === 1 && mode === "comment" && !d.moved && layer) {
+    if (d.pointers.size === 1 && mode === "comment" && !d.moved && !d.pinching && layer) {
       const rect = layer.getBoundingClientRect();
       const x = ((e.clientX - rect.left) / rect.width) * 100;
       const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -271,13 +333,20 @@ export default function PlanViewer({
       }
     }
 
+    const wasPinching = d.pinching;
     d.pointers.delete(e.pointerId);
+
     if (d.pointers.size === 0) {
+      if (wasPinching || gestureMulRef.current !== 1) {
+        commitZoom(zoomRef.current * gestureMulRef.current);
+      }
       d.active = false;
+      d.pinching = false;
       d.pinchDist = 0;
     } else if (d.pointers.size === 1) {
       const remaining = [...d.pointers.values()][0];
       d.active = true;
+      d.pinching = false;
       d.moved = false;
       d.startX = remaining.x;
       d.startY = remaining.y;
@@ -313,7 +382,7 @@ export default function PlanViewer({
     >
       {loading && (
         <div
-          className="absolute inset-0 flex items-center justify-center text-sm"
+          className="absolute inset-0 z-10 flex items-center justify-center text-sm"
           style={{ color: "rgba(235,217,153,0.6)", fontFamily: "var(--font-body)" }}
         >
           Cargando plano…
@@ -321,7 +390,7 @@ export default function PlanViewer({
       )}
       {renderError && (
         <div
-          className="absolute inset-0 flex items-center justify-center text-sm"
+          className="absolute inset-0 z-10 flex items-center justify-center text-sm"
           style={{ color: "var(--terracotta)", fontFamily: "var(--font-body)" }}
         >
           {renderError}
@@ -332,16 +401,21 @@ export default function PlanViewer({
         <div
           className="absolute left-1/2 top-1/2"
           style={{
-            transform: `translate3d(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px), 0) scale(${scale})`,
+            transform: `translate3d(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px), 0) scale(${gestureMul})`,
             transformOrigin: "center center",
             willChange: "transform",
-            transition: animateTransform ? "transform 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94)" : "none",
+            transition: animatePan ? "transform 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94)" : "none",
           }}
         >
           <div
             ref={layerRef}
             className="relative"
-            style={{ width: pageSize.w, height: pageSize.h }}
+            style={{
+              width: pageSize.w,
+              height: pageSize.h,
+              opacity: rendering ? 0.85 : 1,
+              transition: "opacity 0.15s ease",
+            }}
           >
             <canvas ref={canvasRef} className="block max-w-none shadow-md" />
 
@@ -379,7 +453,19 @@ export default function PlanViewer({
         </div>
       )}
 
-      {/* Controles de zoom */}
+      {rendering && !loading && (
+        <div
+          className="pointer-events-none absolute right-14 top-2 z-10 rounded-sm px-2 py-1 text-[10px] uppercase tracking-wide"
+          style={{
+            backgroundColor: "rgba(44, 47, 24, 0.8)",
+            color: "rgba(235,217,153,0.7)",
+            fontFamily: "var(--font-body)",
+          }}
+        >
+          Mejorando…
+        </div>
+      )}
+
       {!loading && !renderError && (
         <div
           data-zoom-control
@@ -392,6 +478,7 @@ export default function PlanViewer({
             aria-label="Acercar"
             className={btnBase}
             style={controlStyle}
+            disabled={rendering}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => zoomBy(ZOOM_STEP)}
           >
@@ -403,6 +490,7 @@ export default function PlanViewer({
             aria-label="Alejar"
             className={btnBase}
             style={controlStyle}
+            disabled={rendering}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => zoomBy(1 / ZOOM_STEP)}
           >
@@ -430,7 +518,7 @@ export default function PlanViewer({
           fontFamily: "var(--font-body)",
         }}
       >
-        Hoja {page}/{pageCount} · {Math.round(scale * 100)}%
+        Hoja {page}/{pageCount} · {Math.round(displayZoom * 100)}%
       </div>
     </div>
   );
