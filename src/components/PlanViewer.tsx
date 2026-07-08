@@ -11,6 +11,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 const MIN_SCALE = 0.4;
 const MAX_SCALE = 5;
+const ZOOM_STEP = 1.25;
 
 type ViewerMode = "navigate" | "comment";
 
@@ -25,6 +26,9 @@ type PlanViewerProps = {
   onPlacePin: (x: number, y: number) => void;
   onSelectPin: (pinId: string | null) => void;
 };
+
+const btnBase =
+  "focus-ring flex h-11 w-11 items-center justify-center rounded-sm border-2 text-lg font-bold leading-none active:scale-95 sm:h-10 sm:w-10";
 
 export default function PlanViewer({
   pdfUrl,
@@ -47,6 +51,11 @@ export default function PlanViewer({
   const [pageSize, setPageSize] = useState({ w: 0, h: 0 });
   const [loading, setLoading] = useState(true);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [animateTransform, setAnimateTransform] = useState(false);
+
+  const scaleRef = useRef(1);
+  const panRef = useRef({ x: 0, y: 0 });
+  const rafRef = useRef<number | null>(null);
 
   const dragRef = useRef({
     active: false,
@@ -59,6 +68,38 @@ export default function PlanViewer({
     pinchDist: 0,
     pinchScale: 1,
   });
+
+  const clampScale = useCallback(
+    (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s)),
+    []
+  );
+
+  const flushTransform = useCallback(() => {
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      setScale(scaleRef.current);
+      setPan({ ...panRef.current });
+    });
+  }, []);
+
+  const resetView = useCallback(() => {
+    setAnimateTransform(true);
+    scaleRef.current = 1;
+    panRef.current = { x: 0, y: 0 };
+    setScale(1);
+    setPan({ x: 0, y: 0 });
+  }, []);
+
+  const zoomBy = useCallback(
+    (factor: number) => {
+      setAnimateTransform(true);
+      const next = clampScale(scaleRef.current * factor);
+      scaleRef.current = next;
+      setScale(next);
+    },
+    [clampScale]
+  );
 
   // Cargar PDF una vez por URL
   useEffect(() => {
@@ -116,7 +157,6 @@ export default function PlanViewer({
         await pdfPage.render({ canvasContext: ctx, viewport, canvas }).promise;
         if (cancelled) return;
 
-        // Miniatura para selector de páginas
         if (onPageRender) {
           const thumbScale = 0.15;
           const thumbVp = pdfPage.getViewport({ scale: thumbScale });
@@ -130,8 +170,7 @@ export default function PlanViewer({
           }
         }
 
-        setScale(1);
-        setPan({ x: 0, y: 0 });
+        resetView();
       } catch {
         if (!cancelled) setRenderError("Error al renderizar la hoja");
       }
@@ -140,19 +179,41 @@ export default function PlanViewer({
     return () => {
       cancelled = true;
     };
-  }, [pdfUrl, page, loading, onPageRender]);
+  }, [pdfUrl, page, loading, onPageRender, resetView]);
 
-  const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
+  useEffect(() => {
+    scaleRef.current = scale;
+  }, [scale]);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setScale((s) => clampScale(s * delta));
+  useEffect(() => {
+    panRef.current = pan;
+  }, [pan]);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
   }, []);
 
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+      setAnimateTransform(false);
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      const next = clampScale(scaleRef.current * delta);
+      scaleRef.current = next;
+      setScale(next);
+    },
+    [clampScale]
+  );
+
   const handlePointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest("[data-zoom-control]")) return;
+
     const el = viewportRef.current;
     if (!el) return;
+
+    setAnimateTransform(false);
     el.setPointerCapture(e.pointerId);
     const d = dragRef.current;
     d.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -162,12 +223,12 @@ export default function PlanViewer({
       d.moved = false;
       d.startX = e.clientX;
       d.startY = e.clientY;
-      d.panX = pan.x;
-      d.panY = pan.y;
+      d.panX = panRef.current.x;
+      d.panY = panRef.current.y;
     } else if (d.pointers.size === 2) {
       const pts = [...d.pointers.values()];
       d.pinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      d.pinchScale = scale;
+      d.pinchScale = scaleRef.current;
       d.active = false;
     }
   };
@@ -182,7 +243,9 @@ export default function PlanViewer({
       const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
       if (d.pinchDist > 0) {
         const ratio = dist / d.pinchDist;
-        setScale(clampScale(d.pinchScale * ratio));
+        const next = clampScale(d.pinchScale * ratio);
+        scaleRef.current = next;
+        flushTransform();
       }
       return;
     }
@@ -191,7 +254,8 @@ export default function PlanViewer({
     const dx = e.clientX - d.startX;
     const dy = e.clientY - d.startY;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) d.moved = true;
-    setPan({ x: d.panX + dx, y: d.panY + dy });
+    panRef.current = { x: d.panX + dx, y: d.panY + dy };
+    flushTransform();
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
@@ -217,12 +281,20 @@ export default function PlanViewer({
       d.moved = false;
       d.startX = remaining.x;
       d.startY = remaining.y;
-      d.panX = pan.x;
-      d.panY = pan.y;
+      d.panX = panRef.current.x;
+      d.panY = panRef.current.y;
     }
   };
 
   const pagePins = pins.filter((p) => p.page === page);
+
+  const controlStyle = {
+    borderColor: "var(--primary-light)",
+    backgroundColor: "rgba(44, 47, 24, 0.9)",
+    color: "var(--cream)",
+    fontFamily: "var(--font-body)",
+    touchAction: "manipulation" as const,
+  };
 
   return (
     <div
@@ -260,8 +332,10 @@ export default function PlanViewer({
         <div
           className="absolute left-1/2 top-1/2"
           style={{
-            transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${scale})`,
+            transform: `translate3d(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px), 0) scale(${scale})`,
             transformOrigin: "center center",
+            willChange: "transform",
+            transition: animateTransform ? "transform 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94)" : "none",
           }}
         >
           <div
@@ -280,6 +354,7 @@ export default function PlanViewer({
                   left: `${pin.x}%`,
                   top: `${pin.y}%`,
                   transform: "translate(-50%, -100%)",
+                  touchAction: "manipulation",
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -288,7 +363,7 @@ export default function PlanViewer({
                 onPointerDown={(e) => e.stopPropagation()}
               >
                 <span
-                  className="flex h-6 w-6 items-center justify-center rounded-full border-2 text-[10px] font-bold shadow"
+                  className="flex h-7 w-7 items-center justify-center rounded-full border-2 text-[10px] font-bold shadow sm:h-6 sm:w-6"
                   style={{
                     borderColor: pin.resolved ? "var(--primary)" : "var(--terracotta)",
                     backgroundColor: pin.resolved ? "var(--primary)" : "var(--terracotta)",
@@ -301,6 +376,49 @@ export default function PlanViewer({
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Controles de zoom */}
+      {!loading && !renderError && (
+        <div
+          data-zoom-control
+          className="absolute right-2 top-2 z-20 flex flex-col gap-1.5"
+          style={{ touchAction: "manipulation" }}
+        >
+          <button
+            type="button"
+            data-zoom-control
+            aria-label="Acercar"
+            className={btnBase}
+            style={controlStyle}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => zoomBy(ZOOM_STEP)}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            data-zoom-control
+            aria-label="Alejar"
+            className={btnBase}
+            style={controlStyle}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => zoomBy(1 / ZOOM_STEP)}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            data-zoom-control
+            aria-label="Restablecer tamaño"
+            className={`${btnBase} text-sm`}
+            style={controlStyle}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={resetView}
+          >
+            ⟲
+          </button>
         </div>
       )}
 
