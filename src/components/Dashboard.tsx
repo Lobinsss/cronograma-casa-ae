@@ -2,15 +2,18 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { STAGES } from "@/lib/schedule";
-import type { FullState, Role } from "@/lib/types";
+import type { DashboardTab, FullState, Role } from "@/lib/types";
 import Header from "./Header";
+import DashboardTabs from "./DashboardTabs";
 import Gantt from "./Gantt";
 import ChecklistPanel from "./ChecklistPanel";
 import MilestonesTrack from "./MilestonesTrack";
+import PlanosPanel from "./PlanosPanel";
 
 const POLL_MS = 6000;
 
 export default function Dashboard({ role }: { role: Role }) {
+  const [tab, setTab] = useState<DashboardTab>("cronograma");
   const [state, setState] = useState<FullState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
@@ -32,7 +35,6 @@ export default function Dashboard({ role }: { role: Role }) {
   }, []);
 
   useEffect(() => {
-    // Carga inicial + sondeo periódico del estado compartido en Redis.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga de datos intencional al montar
     fetchState();
     const id = setInterval(fetchState, POLL_MS);
@@ -58,21 +60,12 @@ export default function Dashboard({ role }: { role: Role }) {
     }
   }
 
-  if (!state) {
-    return (
-      <div
-        className="flex flex-1 items-center justify-center text-sm"
-        style={{ color: "rgba(235,217,153,0.5)", fontFamily: "var(--font-body)" }}
-      >
-        Cargando bitácora…
-      </div>
-    );
-  }
-
   const allTasks = STAGES.flatMap((s) => s.tasks);
-  const doneTasks = allTasks.filter((t) => state.tasks[t.id]?.done).length;
+  const doneTasks = state ? allTasks.filter((t) => state.tasks[t.id]?.done).length : 0;
   const validatable = allTasks.filter((t) => t.requiresClientValidation);
-  const validatedCount = validatable.filter((t) => state.tasks[t.id]?.validated).length;
+  const validatedCount = state
+    ? validatable.filter((t) => state.tasks[t.id]?.validated).length
+    : 0;
 
   return (
     <>
@@ -83,39 +76,54 @@ export default function Dashboard({ role }: { role: Role }) {
         validatedCount={validatedCount}
         totalValidatable={validatable.length}
       />
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 px-5 py-6">
-        {error && (
-          <div
-            className="rounded-sm border-2 px-3 py-2 text-sm"
-            style={{ borderColor: "var(--clay)", color: "var(--clay)" }}
-          >
-            {error}
-          </div>
-        )}
+      <DashboardTabs active={tab} onChange={setTab} />
 
-        <Gantt state={state} />
-
-        <ChecklistPanel
-          state={state}
-          role={role}
-          onToggleDone={(id) => sendAction("task", id, "toggleDone")}
-          onTogglePago={(id) => sendAction("task", id, "togglePago")}
-          onToggleValidated={(id) => sendAction("task", id, "toggleValidated")}
-        />
-
-        <MilestonesTrack
-          state={state}
-          role={role}
-          onToggle={(id) => sendAction("milestone", id, "toggleDone")}
-        />
-
-        <p
-          className="pb-4 text-center text-[11px]"
-          style={{ color: "rgba(235,217,153,0.35)", fontFamily: "var(--font-body)" }}
+      {tab === "planos" ? (
+        <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-5 py-6">
+          <PlanosPanel role={role} />
+        </main>
+      ) : !state ? (
+        <div
+          className="flex flex-1 items-center justify-center text-sm"
+          style={{ color: "rgba(235,217,153,0.5)", fontFamily: "var(--font-body)" }}
         >
-          Sincronización cada {POLL_MS / 1000}s · Casa AE 2026
-        </p>
-      </main>
+          Cargando bitácora…
+        </div>
+      ) : (
+        <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-5 px-5 py-6">
+          {error && (
+            <div
+              className="rounded-sm border-2 px-3 py-2 text-sm"
+              style={{ borderColor: "var(--clay)", color: "var(--clay)" }}
+            >
+              {error}
+            </div>
+          )}
+
+          <Gantt state={state} />
+
+          <ChecklistPanel
+            state={state}
+            role={role}
+            onToggleDone={(id) => sendAction("task", id, "toggleDone")}
+            onTogglePago={(id) => sendAction("task", id, "togglePago")}
+            onToggleValidated={(id) => sendAction("task", id, "toggleValidated")}
+          />
+
+          <MilestonesTrack
+            state={state}
+            role={role}
+            onToggle={(id) => sendAction("milestone", id, "toggleDone")}
+          />
+
+          <p
+            className="pb-4 text-center text-[11px]"
+            style={{ color: "rgba(235,217,153,0.35)", fontFamily: "var(--font-body)" }}
+          >
+            Sincronización cada {POLL_MS / 1000}s · Casa AE 2026
+          </p>
+        </main>
+      )}
     </>
   );
 }

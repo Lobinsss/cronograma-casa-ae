@@ -18,3 +18,40 @@ export type FullState = {
 };
 
 export type Role = "macondo" | "cliente";
+
+export type CommentReply = {
+  id: string;
+  author: Role;
+  text: string;
+  createdAt: string;
+};
+
+export type PlanPin = {
+  id: string;
+  planId: string;
+  page: number;
+  x: number;
+  y: number;
+  author: Role;
+  text: string;
+  createdAt: string;
+  resolved: boolean;
+  replies: CommentReply[];
+};
+
+export type PlanGeneralComment = {
+  id: string;
+  planId: string;
+  page: number;
+  author: Role;
+  text: string;
+  createdAt: string;
+  replies: CommentReply[];
+};
+
+export type PlanosState = {
+  pins: PlanPin[];
+  generalComments: PlanGeneralComment[];
+};
+
+export type DashboardTab = "cronograma" | "planos";
