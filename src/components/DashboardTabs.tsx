@@ -12,6 +12,7 @@ export default function DashboardTabs({
   const tabs: { id: DashboardTab; label: string }[] = [
     { id: "cronograma", label: "Cronograma" },
     { id: "planos", label: "Planos" },
+    { id: "entrega", label: "Entrega-Recepción" },
   ];
 
   return (
@@ -20,7 +21,7 @@ export default function DashboardTabs({
       style={{ borderColor: "var(--primary-light)", backgroundColor: "var(--primary-deeper)" }}
       aria-label="Secciones de la bitácora"
     >
-      <div className="mx-auto flex w-full max-w-5xl gap-1">
+      <div className="mx-auto flex w-full max-w-5xl gap-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}

@@ -9,6 +9,7 @@ import Gantt from "./Gantt";
 import ChecklistPanel from "./ChecklistPanel";
 import MilestonesTrack from "./MilestonesTrack";
 import PlanosPanel from "./PlanosPanel";
+import EntregaRecepcionPanel from "./EntregaRecepcionPanel";
 
 const POLL_MS = 6000;
 
@@ -81,6 +82,10 @@ export default function Dashboard({ role }: { role: Role }) {
       {tab === "planos" ? (
         <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-5 py-6">
           <PlanosPanel role={role} />
+        </main>
+      ) : tab === "entrega" ? (
+        <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-5 py-6">
+          <EntregaRecepcionPanel role={role} />
         </main>
       ) : !state ? (
         <div

@@ -54,4 +54,47 @@ export type PlanosState = {
   generalComments: PlanGeneralComment[];
 };
 
-export type DashboardTab = "cronograma" | "planos";
+export type DashboardTab = "cronograma" | "planos" | "entrega";
+
+export type InsumoStatus = "igual" | "cambio";
+
+export type InsumoEditable = {
+  status: InsumoStatus;
+  nuevoConcepto?: string;
+  nuevaCantidad?: number;
+  comentario?: string;
+};
+
+export type InsumoAdicional = {
+  id: string;
+  espacio: string;
+  producto: string;
+  cantidad: number;
+  comentario?: string;
+  addedAt: string;
+};
+
+export type EntregaRecepcionState = {
+  items: Record<string, InsumoEditable>;
+  adicionales: InsumoAdicional[];
+};
+
+export type InsumoRow = {
+  id: string;
+  espacio: string;
+  producto: string;
+  cantidad: number;
+  status: InsumoStatus;
+  nuevoConcepto?: string;
+  nuevaCantidad?: number;
+  comentario?: string;
+  isAdicional: boolean;
+  preMarked: boolean;
+};
+
+export type EntregaSummary = {
+  totalItems: number;
+  enCambio: number;
+  cantidadPlaneada: number;
+  cantidadActual: number;
+};
