@@ -62,7 +62,7 @@ export default function Dashboard({ role }: { role: Role }) {
     return (
       <div
         className="flex flex-1 items-center justify-center text-sm"
-        style={{ color: "rgba(243,240,230,0.5)", fontFamily: "var(--font-mono)" }}
+        style={{ color: "rgba(235,217,153,0.5)", fontFamily: "var(--font-body)" }}
       >
         Cargando bitácora…
       </div>
@@ -111,7 +111,7 @@ export default function Dashboard({ role }: { role: Role }) {
 
         <p
           className="pb-4 text-center text-[11px]"
-          style={{ color: "rgba(243,240,230,0.35)", fontFamily: "var(--font-mono)" }}
+          style={{ color: "rgba(235,217,153,0.35)", fontFamily: "var(--font-body)" }}
         >
           Sincronización cada {POLL_MS / 1000}s · Casa AE 2026
         </p>

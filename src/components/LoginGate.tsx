@@ -46,7 +46,7 @@ export default function LoginGate() {
       >
         <div
           className="mb-1 text-[11px] uppercase tracking-[0.2em]"
-          style={{ color: "var(--blue-line)", fontFamily: "var(--font-mono)" }}
+          style={{ color: "var(--blue-line)", fontFamily: "var(--font-body)" }}
         >
           Proyecto · Casa AE
         </div>
@@ -65,10 +65,10 @@ export default function LoginGate() {
               onClick={() => setRole(r)}
               className="focus-ring rounded-sm border-2 py-2 text-sm font-semibold uppercase tracking-wide transition-colors"
               style={{
-                fontFamily: "var(--font-mono)",
-                borderColor: role === r ? "var(--gold-stamp)" : "rgba(243,240,230,0.25)",
-                color: role === r ? "var(--gold-stamp)" : "rgba(243,240,230,0.6)",
-                backgroundColor: role === r ? "rgba(201,154,61,0.1)" : "transparent",
+                fontFamily: "var(--font-body)",
+                borderColor: role === r ? "var(--cream)" : "rgba(235,217,153,0.3)",
+                color: role === r ? "var(--cream)" : "rgba(235,217,153,0.65)",
+                backgroundColor: role === r ? "rgba(235,217,153,0.12)" : "transparent",
               }}
             >
               {r === "macondo" ? "Macondo" : "Cliente"}
@@ -80,7 +80,7 @@ export default function LoginGate() {
           <label className="flex flex-col gap-1">
             <span
               className="text-[11px] uppercase tracking-wide"
-              style={{ color: "rgba(243,240,230,0.55)", fontFamily: "var(--font-mono)" }}
+              style={{ color: "rgba(235,217,153,0.65)", fontFamily: "var(--font-body)" }}
             >
               Contraseña de acceso
             </span>
@@ -90,7 +90,7 @@ export default function LoginGate() {
               onChange={(e) => setPassword(e.target.value)}
               autoFocus
               className="focus-ring rounded-sm border-2 bg-transparent px-3 py-2 text-base"
-              style={{ borderColor: "rgba(243,240,230,0.25)", color: "var(--paper)" }}
+              style={{ borderColor: "rgba(235,217,153,0.35)", color: "var(--paper)" }}
               placeholder="••••••••"
             />
           </label>
@@ -106,10 +106,10 @@ export default function LoginGate() {
             disabled={loading || !password}
             className="focus-ring mt-2 rounded-sm border-2 py-2.5 text-sm font-bold uppercase tracking-wide transition-opacity disabled:opacity-40"
             style={{
-              borderColor: "var(--growth)",
-              backgroundColor: "var(--growth)",
-              color: "var(--ink-navy-deep)",
-              fontFamily: "var(--font-mono)",
+              borderColor: "var(--primary)",
+              backgroundColor: "var(--primary)",
+              color: "var(--cream)",
+              fontFamily: "var(--font-body)",
             }}
           >
             {loading ? "Entrando…" : "Entrar a la obra"}

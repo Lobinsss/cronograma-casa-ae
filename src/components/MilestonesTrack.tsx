@@ -17,7 +17,7 @@ export default function MilestonesTrack({
   return (
     <div
       className="rounded-sm border-2 p-5"
-      style={{ borderColor: "var(--gold-stamp)", backgroundColor: "rgba(13,25,48,0.6)" }}
+      style={{ borderColor: "var(--cream)", backgroundColor: "rgba(0, 42, 92, 0.55)" }}
     >
       <div className="mb-1 flex items-baseline justify-between">
         <h2
@@ -29,7 +29,7 @@ export default function MilestonesTrack({
       </div>
       <p
         className="mb-4 text-[11px]"
-        style={{ color: "rgba(243,240,230,0.5)", fontFamily: "var(--font-mono)" }}
+        style={{ color: "rgba(235,217,153,0.55)", fontFamily: "var(--font-body)" }}
       >
         Una visita mensual por 3 meses a partir de la entrega de obra. Fechas ajustadas a días
         hábiles, excluyendo festivos oficiales.
@@ -42,12 +42,12 @@ export default function MilestonesTrack({
             <div
               key={m.id}
               className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 last:border-b-0 last:pb-0"
-              style={{ borderColor: "rgba(243,240,230,0.1)" }}
+              style={{ borderColor: "rgba(235,217,153,0.15)" }}
             >
               <div>
                 <div
                   className="text-[10px] uppercase tracking-widest"
-                  style={{ color: "var(--gold-stamp)", fontFamily: "var(--font-mono)" }}
+                  style={{ color: "var(--cream)", fontFamily: "var(--font-body)" }}
                 >
                   Visita {i + 1} de 3
                 </div>

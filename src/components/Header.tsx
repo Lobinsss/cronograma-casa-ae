@@ -33,7 +33,7 @@ export default function Header({
         <div>
           <div
             className="text-[11px] uppercase tracking-[0.2em]"
-            style={{ color: "var(--blue-line)", fontFamily: "var(--font-mono)" }}
+            style={{ color: "var(--blue-line)", fontFamily: "var(--font-body)" }}
           >
             Proyecto · Casa AE
           </div>
@@ -49,14 +49,14 @@ export default function Header({
           <div className="text-right">
             <div
               className="text-[10px] uppercase tracking-wide"
-              style={{ color: "rgba(243,240,230,0.5)", fontFamily: "var(--font-mono)" }}
+              style={{ color: "rgba(235,217,153,0.5)", fontFamily: "var(--font-body)" }}
             >
               Avance de obra
             </div>
             <div className="flex items-center gap-2">
               <div
                 className="h-1.5 w-24 overflow-hidden rounded-full"
-                style={{ backgroundColor: "rgba(243,240,230,0.15)" }}
+                style={{ backgroundColor: "rgba(235,217,153,0.2)" }}
               >
                 <div
                   className="h-full rounded-full"
@@ -65,7 +65,7 @@ export default function Header({
               </div>
               <span
                 className="text-xs"
-                style={{ fontFamily: "var(--font-mono)", color: "var(--paper)" }}
+                style={{ fontFamily: "var(--font-body)", color: "var(--paper)" }}
               >
                 {doneTasks}/{totalTasks}
               </span>
@@ -73,7 +73,7 @@ export default function Header({
             {totalValidatable > 0 && (
               <div
                 className="mt-0.5 text-[10px]"
-                style={{ color: "var(--gold-stamp)", fontFamily: "var(--font-mono)" }}
+                style={{ color: "var(--cream)", fontFamily: "var(--font-body)" }}
               >
                 Validado por cliente: {validatedCount}/{totalValidatable}
               </div>
@@ -83,9 +83,9 @@ export default function Header({
           <div
             className="rounded-sm border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wide"
             style={{
-              borderColor: role === "macondo" ? "var(--growth)" : "var(--gold-stamp)",
-              color: role === "macondo" ? "var(--growth)" : "var(--gold-stamp)",
-              fontFamily: "var(--font-mono)",
+              borderColor: role === "macondo" ? "var(--cream)" : "var(--terracotta)",
+              color: role === "macondo" ? "var(--cream)" : "var(--terracotta)",
+              fontFamily: "var(--font-body)",
             }}
           >
             {role === "macondo" ? "Macondo" : "Cliente"}
@@ -95,7 +95,7 @@ export default function Header({
             type="button"
             onClick={handleLogout}
             className="focus-ring text-xs underline-offset-2 hover:underline"
-            style={{ color: "rgba(243,240,230,0.5)", fontFamily: "var(--font-mono)" }}
+            style={{ color: "rgba(235,217,153,0.5)", fontFamily: "var(--font-body)" }}
           >
             Salir
           </button>

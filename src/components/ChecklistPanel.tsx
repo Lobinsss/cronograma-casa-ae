@@ -35,7 +35,7 @@ export default function ChecklistPanel({
             </h3>
             <span
               className="text-[10px] uppercase tracking-wide opacity-60"
-              style={{ fontFamily: "var(--font-mono)" }}
+              style={{ fontFamily: "var(--font-body)" }}
             >
               {formatShort(stage.start)} – {formatShort(stage.end)}
             </span>
@@ -52,7 +52,7 @@ export default function ChecklistPanel({
                 <li
                   key={task.id}
                   className="flex flex-wrap items-center justify-between gap-2 border-b pb-2.5 last:border-b-0 last:pb-0"
-                  style={{ borderColor: "rgba(35,39,34,0.1)" }}
+                  style={{ borderColor: "rgba(80, 84, 35, 0.15)" }}
                 >
                   <span className={`text-sm ${st?.done ? "line-through opacity-50" : ""}`}>
                     {task.label}

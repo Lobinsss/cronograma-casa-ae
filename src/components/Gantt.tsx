@@ -37,7 +37,7 @@ export default function Gantt({ state }: { state: FullState }) {
   return (
     <div
       className="rounded-sm border-2 p-5"
-      style={{ borderColor: "var(--blue-line)", backgroundColor: "rgba(13,25,48,0.6)" }}
+      style={{ borderColor: "var(--blue-line)", backgroundColor: "rgba(0, 42, 92, 0.55)" }}
     >
       <div className="mb-4 flex items-baseline justify-between">
         <h2
@@ -48,22 +48,22 @@ export default function Gantt({ state }: { state: FullState }) {
         </h2>
         <span
           className="text-[11px] uppercase tracking-widest"
-          style={{ color: "var(--blue-line)", fontFamily: "var(--font-mono)" }}
+          style={{ color: "var(--blue-line)", fontFamily: "var(--font-body)" }}
         >
           {formatShort(RANGE_START)} — {formatShort(RANGE_END)} 2026
         </span>
       </div>
 
       {/* Regla de semanas */}
-      <div className="relative mb-2 h-5 border-b" style={{ borderColor: "rgba(111,168,199,0.3)" }}>
+      <div className="relative mb-2 h-5 border-b" style={{ borderColor: "rgba(235,217,153,0.25)" }}>
         {weekTicks.map((t) => (
           <div
             key={t.offset}
             className="absolute top-0 text-[10px]"
             style={{
               left: `${pct(t.offset)}%`,
-              color: "rgba(243,240,230,0.5)",
-              fontFamily: "var(--font-mono)",
+              color: "rgba(235,217,153,0.55)",
+              fontFamily: "var(--font-body)",
             }}
           >
             {t.label}
@@ -80,7 +80,7 @@ export default function Gantt({ state }: { state: FullState }) {
           >
             <div
               className="absolute -top-2 -translate-x-1/2 text-[9px] uppercase whitespace-nowrap"
-              style={{ color: "var(--clay)", fontFamily: "var(--font-mono)" }}
+              style={{ color: "var(--terracotta)", fontFamily: "var(--font-body)" }}
             >
               hoy
             </div>
@@ -95,11 +95,11 @@ export default function Gantt({ state }: { state: FullState }) {
             <div key={stage.id} className="flex items-center gap-3">
               <div
                 className="w-28 shrink-0 text-xs font-semibold uppercase tracking-wide"
-                style={{ color: stage.accent, fontFamily: "var(--font-mono)" }}
+                style={{ color: stage.accent, fontFamily: "var(--font-body)" }}
               >
                 {stage.shortLabel}
               </div>
-              <div className="relative h-8 flex-1 rounded-sm" style={{ backgroundColor: "rgba(243,240,230,0.05)" }}>
+              <div className="relative h-8 flex-1 rounded-sm" style={{ backgroundColor: "rgba(235,217,153,0.08)" }}>
                 <div
                   className="absolute top-0 h-full rounded-sm border-2"
                   style={{
@@ -121,7 +121,7 @@ export default function Gantt({ state }: { state: FullState }) {
               </div>
               <div
                 className="w-10 shrink-0 text-right text-xs"
-                style={{ fontFamily: "var(--font-mono)", color: "rgba(243,240,230,0.6)" }}
+                style={{ fontFamily: "var(--font-body)", color: "rgba(235,217,153,0.65)" }}
               >
                 {progress}%
               </div>
@@ -132,7 +132,7 @@ export default function Gantt({ state }: { state: FullState }) {
 
       <p
         className="mt-4 text-[11px] leading-relaxed"
-        style={{ color: "rgba(243,240,230,0.45)", fontFamily: "var(--font-mono)" }}
+        style={{ color: "rgba(235,217,153,0.5)", fontFamily: "var(--font-body)" }}
       >
         Las etapas corren en paralelo por diseño: riego, suministro y plantación se traslapan
         durante la obra.

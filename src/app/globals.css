@@ -1,25 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  /* --- Paleta: bitácora de obra / plano técnico --- */
-  --ink-navy: #14243d;        /* fondo principal, azul plano técnico */
-  --ink-navy-deep: #0d1930;   /* fondo más profundo, encabezados */
-  --blue-line: #6fa8c7;       /* líneas de cuadrícula, acentos técnicos */
-  --paper: #f3f0e6;           /* tarjetas tipo papel */
-  --paper-dim: #e7e2d2;       /* paper secundario */
-  --graphite: #232722;        /* texto sobre papel */
-  --clay: #b5533c;            /* alerta / pendiente, sello rojo */
-  --growth: #4c7a5e;          /* completado, verde vivero */
-  --growth-deep: #365643;
-  --gold-stamp: #c99a3d;      /* validación cliente, sello dorado */
+  /* --- Paleta Casa AE --- */
+  --terracotta: #a93400;
+  --cream: #ebd999;
+  --primary: #505423;
+  --blue: #003e83;
 
-  --stage-riego: #6fa8c7;
-  --stage-suministro: #c99a3d;
-  --stage-plantacion: #4c7a5e;
+  /* alias semánticos */
+  --ink-navy: var(--blue);
+  --ink-navy-deep: #002a5c;
+  --blue-line: #4a7ab5;
+  --paper: var(--cream);
+  --paper-dim: #e0cc8a;
+  --graphite: #2c2f18;
+  --clay: var(--terracotta);
+  --growth: var(--primary);
+  --growth-deep: #3d4019;
+  --gold-stamp: var(--cream);
 
-  --font-display: var(--font-big-shoulders), "Arial Narrow", sans-serif;
-  --font-body: var(--font-plex-sans), system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --stage-riego: var(--blue);
+  --stage-suministro: var(--terracotta);
+  --stage-plantacion: var(--primary);
+
+  --font-display: var(--font-elms-sans), system-ui, sans-serif;
+  --font-body: var(--font-elms-sans), system-ui, sans-serif;
+  --font-mono: var(--font-elms-sans), system-ui, sans-serif;
 }
 
 * {
@@ -33,22 +39,21 @@ body {
 }
 
 body {
-  background-color: var(--ink-navy);
+  background-color: var(--blue);
   background-image:
-    linear-gradient(rgba(111, 168, 199, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(111, 168, 199, 0.08) 1px, transparent 1px);
+    linear-gradient(rgba(235, 217, 153, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(235, 217, 153, 0.07) 1px, transparent 1px);
   background-size: 28px 28px;
-  color: var(--paper);
+  color: var(--cream);
   font-family: var(--font-body);
   min-height: 100vh;
 }
 
 ::selection {
-  background: var(--gold-stamp);
-  color: var(--ink-navy-deep);
+  background: var(--cream);
+  color: var(--blue);
 }
 
-/* Sello de "hecho" — efecto de estampa de inspección de obra */
 @keyframes stamp-in {
   0% {
     transform: scale(2.2) rotate(-14deg);
@@ -75,6 +80,6 @@ body {
 }
 
 .focus-ring:focus-visible {
-  outline: 2px solid var(--gold-stamp);
+  outline: 2px solid var(--cream);
   outline-offset: 2px;
 }
