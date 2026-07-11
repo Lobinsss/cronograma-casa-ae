@@ -5,6 +5,48 @@ import { formatShort } from "@/lib/dateUtils";
 import { formatCommentTime, roleLabel } from "@/lib/commentUtils";
 import type { Role, ScheduleStageView, StageDateChange } from "@/lib/types";
 
+function HistoryList({ history }: { history: StageDateChange[] }) {
+  if (history.length === 0) {
+    return (
+      <p className="text-sm opacity-50" style={{ color: "var(--cream)", fontFamily: "var(--font-body)" }}>
+        Aún no hay cambios registrados en las fechas del cronograma.
+      </p>
+    );
+  }
+
+  return (
+    <ol className="flex max-h-64 flex-col gap-2 overflow-y-auto">
+      {history.map((h) => (
+        <li
+          key={h.id}
+          className="rounded-sm border-2 p-3 text-xs"
+          style={{ borderColor: "rgba(235,217,153,0.15)", color: "rgba(235,217,153,0.85)" }}
+        >
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-1">
+            <span className="font-bold uppercase" style={{ color: "var(--cream)" }}>
+              {h.stageName}
+            </span>
+            <span className="opacity-60">{formatCommentTime(h.changedAt)}</span>
+          </div>
+          <p>
+            <span className="line-through opacity-50">
+              {formatShort(h.prevStart)} – {formatShort(h.prevEnd)}
+            </span>
+            <span className="mx-1.5">→</span>
+            <span style={{ color: "var(--cream)" }}>
+              {formatShort(h.newStart)} – {formatShort(h.newEnd)}
+            </span>
+          </p>
+          <p className="mt-1 opacity-60">
+            {roleLabel(h.author)}
+            {h.note ? ` · ${h.note}` : ""}
+          </p>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export default function StageDatesEditor({
   stages,
   history,
@@ -25,7 +67,7 @@ export default function StageDatesEditor({
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [note, setNote] = useState("");
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(role === "cliente");
 
   function beginEdit(stage: ScheduleStageView) {
     setEditingId(stage.id);
@@ -37,6 +79,24 @@ export default function StageDatesEditor({
   async function save(stageId: string) {
     const ok = await onUpdate(stageId, start, end, note.trim() || undefined);
     if (ok) setEditingId(null);
+  }
+
+  // Cliente: solo backlog, sin panel de edición
+  if (role === "cliente") {
+    return (
+      <div
+        className="rounded-sm border-2 p-5"
+        style={{ borderColor: "var(--primary-light)", backgroundColor: "rgba(44, 47, 24, 0.45)" }}
+      >
+        <h2
+          className="mb-4 text-lg font-bold uppercase tracking-tight"
+          style={{ fontFamily: "var(--font-display)", color: "var(--paper)" }}
+        >
+          Historial de fechas
+        </h2>
+        <HistoryList history={history} />
+      </div>
+    );
   }
 
   return (
@@ -82,7 +142,7 @@ export default function StageDatesEditor({
                   {formatShort(stage.start)} – {formatShort(stage.end)}
                 </div>
               </div>
-              {role === "macondo" && editingId !== stage.id && (
+              {editingId !== stage.id && (
                 <button
                   type="button"
                   onClick={() => beginEdit(stage)}
@@ -98,7 +158,7 @@ export default function StageDatesEditor({
               )}
             </div>
 
-            {role === "macondo" && editingId === stage.id && (
+            {editingId === stage.id && (
               <div className="mt-3 flex flex-col gap-2 border-t pt-3" style={{ borderColor: "rgba(235,217,153,0.15)" }}>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <label className="flex flex-col gap-1">
@@ -180,42 +240,8 @@ export default function StageDatesEditor({
           >
             Backlog de cambios
           </h3>
-          <ol className="flex max-h-64 flex-col gap-2 overflow-y-auto">
-            {history.map((h) => (
-              <li
-                key={h.id}
-                className="rounded-sm border-2 p-3 text-xs"
-                style={{ borderColor: "rgba(235,217,153,0.15)", color: "rgba(235,217,153,0.85)" }}
-              >
-                <div className="mb-1 flex flex-wrap items-center justify-between gap-1">
-                  <span className="font-bold uppercase" style={{ color: "var(--cream)" }}>
-                    {h.stageName}
-                  </span>
-                  <span className="opacity-60">{formatCommentTime(h.changedAt)}</span>
-                </div>
-                <p>
-                  <span className="line-through opacity-50">
-                    {formatShort(h.prevStart)} – {formatShort(h.prevEnd)}
-                  </span>
-                  <span className="mx-1.5">→</span>
-                  <span style={{ color: "var(--cream)" }}>
-                    {formatShort(h.newStart)} – {formatShort(h.newEnd)}
-                  </span>
-                </p>
-                <p className="mt-1 opacity-60">
-                  {roleLabel(h.author)}
-                  {h.note ? ` · ${h.note}` : ""}
-                </p>
-              </li>
-            ))}
-          </ol>
+          <HistoryList history={history} />
         </div>
-      )}
-
-      {role === "cliente" && (
-        <p className="mt-3 text-[11px] opacity-50" style={{ fontFamily: "var(--font-body)" }}>
-          Vista de solo lectura — Macondo registra los ajustes de fechas en obra.
-        </p>
       )}
     </div>
   );
