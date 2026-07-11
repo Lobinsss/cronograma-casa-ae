@@ -98,3 +98,37 @@ export type EntregaSummary = {
   cantidadPlaneada: number;
   cantidadActual: number;
 };
+
+export type StageDateChange = {
+  id: string;
+  stageId: string;
+  stageName: string;
+  prevStart: string;
+  prevEnd: string;
+  newStart: string;
+  newEnd: string;
+  author: Role;
+  changedAt: string;
+  note?: string;
+};
+
+export type ScheduleDatesState = {
+  overrides: Record<string, { start: string; end: string }>;
+  history: StageDateChange[];
+};
+
+export type ScheduleStageView = {
+  id: string;
+  name: string;
+  shortLabel: string;
+  start: string;
+  end: string;
+  accent: string;
+};
+
+export type ScheduleView = {
+  stages: ScheduleStageView[];
+  rangeStart: string;
+  rangeEnd: string;
+  history: StageDateChange[];
+};

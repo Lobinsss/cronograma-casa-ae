@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import AppFooter from "./AppFooter";
 
 type RoleChoice = "macondo" | "cliente";
 
@@ -36,7 +37,8 @@ export default function LoginGate() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-screen flex-col">
+    <main className="flex flex-1 items-center justify-center px-4">
       <div
         className="w-full max-w-sm rounded-sm border-2 p-8"
         style={{
@@ -117,5 +119,7 @@ export default function LoginGate() {
         </form>
       </div>
     </main>
+    <AppFooter />
+    </div>
   );
 }

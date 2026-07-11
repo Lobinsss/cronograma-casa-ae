@@ -2,16 +2,18 @@
 
 import { STAGES } from "@/lib/schedule";
 import { formatShort } from "@/lib/dateUtils";
-import type { FullState, Role } from "@/lib/types";
+import type { FullState, Role, ScheduleStageView } from "@/lib/types";
 import Stamp from "./Stamp";
 
 export default function ChecklistPanel({
+  stages,
   state,
   role,
   onToggleDone,
   onTogglePago,
   onToggleValidated,
 }: {
+  stages: ScheduleStageView[];
   state: FullState;
   role: Role;
   onToggleDone: (id: string) => void;
@@ -20,7 +22,9 @@ export default function ChecklistPanel({
 }) {
   return (
     <div className="flex flex-col gap-5">
-      {STAGES.map((stage) => (
+      {stages.map((stage) => {
+        const stageTasks = STAGES.find((s) => s.id === stage.id)?.tasks ?? [];
+        return (
         <div
           key={stage.id}
           className="rounded-sm p-4"
@@ -42,7 +46,7 @@ export default function ChecklistPanel({
           </div>
 
           <ul className="flex flex-col gap-2.5">
-            {stage.tasks.map((task) => {
+            {stageTasks.map((task) => {
               const st = state.tasks[task.id];
               const canValidate =
                 task.requiresClientValidation &&
@@ -95,7 +99,8 @@ export default function ChecklistPanel({
             })}
           </ul>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

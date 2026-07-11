@@ -617,12 +617,6 @@ export default function EntregaRecepcionPanel({ role }: { role: Role }) {
         </div>
       )}
 
-      <p
-        className="text-center text-[11px]"
-        style={{ color: "rgba(235,217,153,0.35)", fontFamily: "var(--font-body)" }}
-      >
-        Sincronización cada {POLL_MS / 1000}s · Entrega-Recepción Casa AE
-      </p>
     </div>
   );
 }

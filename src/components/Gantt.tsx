@@ -1,33 +1,40 @@
 "use client";
 
 import { STAGES } from "@/lib/schedule";
-import { parseISO, daysBetween, formatShort, todayISO } from "@/lib/dateUtils";
-import type { FullState } from "@/lib/types";
+import { daysBetween, formatShort, todayISO, parseISO } from "@/lib/dateUtils";
+import type { FullState, ScheduleStageView } from "@/lib/types";
 
-const RANGE_START = "2026-07-06";
-const RANGE_END = "2026-07-29";
-const TOTAL_DAYS = daysBetween(RANGE_START, RANGE_END) + 1;
-
-function pct(days: number) {
-  return (days / TOTAL_DAYS) * 100;
+function pct(days: number, total: number) {
+  return total === 0 ? 0 : (days / total) * 100;
 }
 
 function stageProgress(stageId: string, state: FullState): number {
-  const stage = STAGES.find((s) => s.id === stageId)!;
+  const stage = STAGES.find((s) => s.id === stageId);
+  if (!stage) return 0;
   const total = stage.tasks.length;
   const done = stage.tasks.filter((t) => state.tasks[t.id]?.done).length;
   return total === 0 ? 0 : Math.round((done / total) * 100);
 }
 
-export default function Gantt({ state }: { state: FullState }) {
+export default function Gantt({
+  state,
+  stages,
+  rangeStart,
+  rangeEnd,
+}: {
+  state: FullState;
+  stages: ScheduleStageView[];
+  rangeStart: string;
+  rangeEnd: string;
+}) {
+  const totalDays = daysBetween(rangeStart, rangeEnd) + 1;
   const today = todayISO();
-  const showToday = today >= RANGE_START && today <= RANGE_END;
-  const todayOffset = showToday ? daysBetween(RANGE_START, today) : 0;
+  const showToday = today >= rangeStart && today <= rangeEnd;
+  const todayOffset = showToday ? daysBetween(rangeStart, today) : 0;
 
-  // Marcas de semana para la regla superior
   const weekTicks: { offset: number; label: string }[] = [];
-  for (let i = 0; i <= TOTAL_DAYS; i += 7) {
-    const d = new Date(parseISO(RANGE_START).getTime() + i * 86400000);
+  for (let i = 0; i <= totalDays; i += 7) {
+    const d = new Date(parseISO(rangeStart).getTime() + i * 86400000);
     const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
       d.getDate()
     ).padStart(2, "0")}`;
@@ -50,18 +57,17 @@ export default function Gantt({ state }: { state: FullState }) {
           className="text-[11px] uppercase tracking-widest"
           style={{ color: "var(--blue-line)", fontFamily: "var(--font-body)" }}
         >
-          {formatShort(RANGE_START)} — {formatShort(RANGE_END)} 2026
+          {formatShort(rangeStart)} — {formatShort(rangeEnd)} 2026
         </span>
       </div>
 
-      {/* Regla de semanas */}
       <div className="relative mb-2 h-5 border-b" style={{ borderColor: "rgba(235,217,153,0.25)" }}>
         {weekTicks.map((t) => (
           <div
             key={t.offset}
             className="absolute top-0 text-[10px]"
             style={{
-              left: `${pct(t.offset)}%`,
+              left: `${pct(t.offset, totalDays)}%`,
               color: "rgba(235,217,153,0.55)",
               fontFamily: "var(--font-body)",
             }}
@@ -71,12 +77,11 @@ export default function Gantt({ state }: { state: FullState }) {
         ))}
       </div>
 
-      {/* Filas de etapas */}
       <div className="relative flex flex-col gap-4 py-2">
         {showToday && (
           <div
             className="absolute top-0 bottom-0 w-px z-10"
-            style={{ left: `${pct(todayOffset)}%`, backgroundColor: "var(--clay)" }}
+            style={{ left: `${pct(todayOffset, totalDays)}%`, backgroundColor: "var(--clay)" }}
           >
             <div
               className="absolute -top-2 -translate-x-1/2 text-[9px] uppercase whitespace-nowrap"
@@ -87,8 +92,8 @@ export default function Gantt({ state }: { state: FullState }) {
           </div>
         )}
 
-        {STAGES.map((stage) => {
-          const offset = daysBetween(RANGE_START, stage.start);
+        {stages.map((stage) => {
+          const offset = daysBetween(rangeStart, stage.start);
           const length = daysBetween(stage.start, stage.end) + 1;
           const progress = stageProgress(stage.id, state);
           return (
@@ -103,8 +108,8 @@ export default function Gantt({ state }: { state: FullState }) {
                 <div
                   className="absolute top-0 h-full rounded-sm border-2"
                   style={{
-                    left: `${pct(offset)}%`,
-                    width: `${pct(length)}%`,
+                    left: `${pct(offset, totalDays)}%`,
+                    width: `${pct(length, totalDays)}%`,
                     borderColor: stage.accent,
                     backgroundColor: "rgba(0,0,0,0.15)",
                   }}

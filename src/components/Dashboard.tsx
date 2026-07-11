@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { STAGES } from "@/lib/schedule";
-import type { DashboardTab, FullState, Role } from "@/lib/types";
+import type { DashboardTab, FullState, Role, ScheduleView } from "@/lib/types";
 import Header from "./Header";
 import DashboardTabs from "./DashboardTabs";
+import AppFooter from "./AppFooter";
 import Gantt from "./Gantt";
 import ChecklistPanel from "./ChecklistPanel";
 import MilestonesTrack from "./MilestonesTrack";
+import StageDatesEditor from "./StageDatesEditor";
 import PlanosPanel from "./PlanosPanel";
 import EntregaRecepcionPanel from "./EntregaRecepcionPanel";
 
@@ -16,17 +18,30 @@ const POLL_MS = 6000;
 export default function Dashboard({ role }: { role: Role }) {
   const [tab, setTab] = useState<DashboardTab>("cronograma");
   const [state, setState] = useState<FullState | null>(null);
+  const [schedule, setSchedule] = useState<ScheduleView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
-  const fetchState = useCallback(async () => {
+  const fetchCronograma = useCallback(async () => {
     if (inFlight.current) return;
     inFlight.current = true;
     try {
-      const res = await fetch("/api/state", { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
+      const [stateRes, scheduleRes] = await Promise.all([
+        fetch("/api/state", { cache: "no-store" }),
+        fetch("/api/schedule", { cache: "no-store" }),
+      ]);
+      if (stateRes.ok) {
+        const data = await stateRes.json();
         setState({ tasks: data.tasks, milestones: data.milestones });
+      }
+      if (scheduleRes.ok) {
+        const data = await scheduleRes.json();
+        setSchedule({
+          stages: data.stages,
+          rangeStart: data.rangeStart,
+          rangeEnd: data.rangeEnd,
+          history: data.history,
+        });
       }
     } catch {
       // silencioso — se reintenta en el próximo ciclo de polling
@@ -36,11 +51,12 @@ export default function Dashboard({ role }: { role: Role }) {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga de datos intencional al montar
-    fetchState();
-    const id = setInterval(fetchState, POLL_MS);
+    if (tab !== "cronograma") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga intencional al montar
+    fetchCronograma();
+    const id = setInterval(fetchCronograma, POLL_MS);
     return () => clearInterval(id);
-  }, [fetchState]);
+  }, [fetchCronograma, tab]);
 
   async function sendAction(kind: "task" | "milestone", id: string, action: string) {
     setError(null);
@@ -61,6 +77,37 @@ export default function Dashboard({ role }: { role: Role }) {
     }
   }
 
+  async function updateStageDates(
+    stageId: string,
+    start: string,
+    end: string,
+    note?: string
+  ): Promise<boolean> {
+    setError(null);
+    try {
+      const res = await fetch("/api/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "updateStageDates", stageId, start, end, note }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setError(data.error || "No se pudo actualizar las fechas");
+        return false;
+      }
+      setSchedule({
+        stages: data.stages,
+        rangeStart: data.rangeStart,
+        rangeEnd: data.rangeEnd,
+        history: data.history,
+      });
+      return true;
+    } catch {
+      setError("Error de conexión. Intenta de nuevo.");
+      return false;
+    }
+  }
+
   const allTasks = STAGES.flatMap((s) => s.tasks);
   const doneTasks = state ? allTasks.filter((t) => state.tasks[t.id]?.done).length : 0;
   const validatable = allTasks.filter((t) => t.requiresClientValidation);
@@ -69,7 +116,7 @@ export default function Dashboard({ role }: { role: Role }) {
     : 0;
 
   return (
-    <>
+    <div className="flex min-h-full flex-1 flex-col">
       <Header
         role={role}
         doneTasks={doneTasks}
@@ -87,7 +134,7 @@ export default function Dashboard({ role }: { role: Role }) {
         <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-5 py-6">
           <EntregaRecepcionPanel role={role} />
         </main>
-      ) : !state ? (
+      ) : !state || !schedule ? (
         <div
           className="flex flex-1 items-center justify-center text-sm"
           style={{ color: "rgba(235,217,153,0.5)", fontFamily: "var(--font-body)" }}
@@ -105,9 +152,22 @@ export default function Dashboard({ role }: { role: Role }) {
             </div>
           )}
 
-          <Gantt state={state} />
+          <Gantt
+            state={state}
+            stages={schedule.stages}
+            rangeStart={schedule.rangeStart}
+            rangeEnd={schedule.rangeEnd}
+          />
+
+          <StageDatesEditor
+            stages={schedule.stages}
+            history={schedule.history}
+            role={role}
+            onUpdate={updateStageDates}
+          />
 
           <ChecklistPanel
+            stages={schedule.stages}
             state={state}
             role={role}
             onToggleDone={(id) => sendAction("task", id, "toggleDone")}
@@ -120,15 +180,10 @@ export default function Dashboard({ role }: { role: Role }) {
             role={role}
             onToggle={(id) => sendAction("milestone", id, "toggleDone")}
           />
-
-          <p
-            className="pb-4 text-center text-[11px]"
-            style={{ color: "rgba(235,217,153,0.35)", fontFamily: "var(--font-body)" }}
-          >
-            Sincronización cada {POLL_MS / 1000}s · Casa AE 2026
-          </p>
         </main>
       )}
-    </>
+
+      <AppFooter />
+    </div>
   );
 }
